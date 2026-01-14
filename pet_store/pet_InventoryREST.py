@@ -65,9 +65,9 @@ def find_exact_animal(data, target):
     """
     Helper function to find an exact animal in the data.
     """
-    target = target.strip()
+    target = target.lower()
     for animal in data:
-        if animal.get("name") == target:
+        if animal.get("name").lower() == target:
             return animal
     return None
 
@@ -103,7 +103,7 @@ def add_pet_type():
             return jsonify({"error": "Missing 'type' field in JSON"}), 400
 
         # Normalise type for storage / lookup
-        animal_type = raw_type.title()
+        animal_type = raw_type.strip()
         
         if pet_types_col.find_one({"type": animal_type}):
             return jsonify({"error": f"{animal_type} already exists"}), 400
@@ -123,7 +123,7 @@ def add_pet_type():
 
 
         if attribute_val:
-            attribute = [x.strip() for x in re.split(r'[,]', attribute_val) if x.strip()]
+            attribute = [x.strip() for x in re.findall(r"[A-Za-z']+", attribute_val) if x.strip()]
         else: 
             attribute = []
 
@@ -138,7 +138,7 @@ def add_pet_type():
             "family": taxonomy.get("family", "NA"),
             "genus": taxonomy.get("genus", "NA"),
             "lifespan": get_lifespan(characteristics.get("lifespan", None)),
-            "attribute": attribute,
+            "attributes": attribute,
             "pets": []
         }
 
@@ -151,7 +151,7 @@ def add_pet_type():
             "family": pet_type_doc["family"],
             "genus": pet_type_doc["genus"],
             "lifespan": pet_type_doc["lifespan"],
-            "attribute": pet_type_doc["attribute"],
+            "attributes": pet_type_doc["attribute"],
             "pets": pet_type_doc["pets"],
         }
         return jsonify(response_doc), 201
@@ -238,13 +238,13 @@ def get_pet_by():
                 query["id"] = int(pet_id)
             except ValueError:
                 return jsonify({"error": "Invalid id"}), 400
-        if type_name: query["type"] = type_name.title()
+        if type_name: query["type"] = type_name.strip()
         if family: query["family"] = family.title()
         if genus:  query["genus"] = genus.title()
         if lifespan: query["lifespan"] = int(lifespan)
         if attribute:
             #Searches for attributes in the list
-            query["attribute"] = {"$regex": f"^{attribute}", "$options": "i"}
+            query["attributes"] = {"$regex": f"^{attribute}", "$options": "i"}
 
         results = list(pet_types_col.find(query))
         clean_results = []
