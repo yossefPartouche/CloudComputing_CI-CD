@@ -1,4 +1,5 @@
 import requests
+import pytest
 
 # ------------------------------------------------------
 # Configuration (MANDATED PORTS)
@@ -7,7 +8,7 @@ STORE1 = "http://localhost:5001"
 STORE2 = "http://localhost:5002"
 
 # ------------------------------------------------------
-# PET TYPES (from assignment slides)
+# PET TYPES
 # ------------------------------------------------------
 PET_TYPE1 = {"type": "Golden Retriever"}
 PET_TYPE1_VAL = {
@@ -58,31 +59,34 @@ PET7_TYPE4 = {"name": "Lazy", "birthdate": "07-08-2018"}
 PET8_TYPE4 = {"name": "Lemon", "birthdate": "27-03-2020"}
 
 # ------------------------------------------------------
-# HELPER
+# HELPERS
 # ------------------------------------------------------
 def post_type(store, payload):
     r = requests.post(f"{store}/pet-types", json=payload)
     assert r.status_code == 201
-    return r.json()["id"], r.json()
+    body = r.json()
+    return body["id"], body
 
 # ------------------------------------------------------
-# TESTS
+# FIXTURE (shared state)
 # ------------------------------------------------------
+@pytest.fixture(scope="module")
+def pet_type_ids():
+    ids = {}
 
-def test_pet_types_creation_and_validation():
-    # 1–2. POST pet-types
-    id1, v1 = post_type(STORE1, PET_TYPE1)
-    id2, v2 = post_type(STORE1, PET_TYPE2)
-    id3, v3 = post_type(STORE1, PET_TYPE3)
+    ids["s1_id1"], v1 = post_type(STORE1, PET_TYPE1)
+    ids["s1_id2"], v2 = post_type(STORE1, PET_TYPE2)
+    ids["s1_id3"], v3 = post_type(STORE1, PET_TYPE3)
 
-    id4, v4 = post_type(STORE2, PET_TYPE1)
-    id5, v5 = post_type(STORE2, PET_TYPE2)
-    id6, v6 = post_type(STORE2, PET_TYPE4)
+    ids["s2_id1"], v4 = post_type(STORE2, PET_TYPE1)
+    ids["s2_id2"], v5 = post_type(STORE2, PET_TYPE2)
+    ids["s2_id3"], v6 = post_type(STORE2, PET_TYPE4)
 
-    # unique IDs
-    assert len({id1, id2, id3, id4, id5, id6}) == 6
+    # IDs unique *per store*
+    assert len({ids["s1_id1"], ids["s1_id2"], ids["s1_id3"]}) == 3
+    assert len({ids["s2_id1"], ids["s2_id2"], ids["s2_id3"]}) == 3
 
-    # validate fields
+    # Validate returned payloads
     assert v1 == PET_TYPE1_VAL
     assert v2 == PET_TYPE2_VAL
     assert v3 == PET_TYPE3_VAL
@@ -90,45 +94,57 @@ def test_pet_types_creation_and_validation():
     assert v5 == PET_TYPE2_VAL
     assert v6 == PET_TYPE4_VAL
 
-    # store ids for next tests
-    test_pet_types_creation_and_validation.ids = {
-        "id1": id1, "id2": id2, "id3": id3,
-        "id4": id4, "id5": id5, "id6": id6
-    }
+    return ids
 
-def test_pets_creation():
-    ids = test_pet_types_creation_and_validation.ids
-
-    # Store 1 pets
+# ------------------------------------------------------
+# TESTS
+# ------------------------------------------------------
+def test_pets_creation(pet_type_ids):
+    # Store 1
     for payload in [PET1_TYPE1, PET2_TYPE1]:
-        r = requests.post(f"{STORE1}/pet-types/{ids['id1']}/pets", json=payload)
+        r = requests.post(
+            f"{STORE1}/pet-types/{pet_type_ids['s1_id1']}/pets",
+            json=payload
+        )
         assert r.status_code == 201
 
     for payload in [PET5_TYPE3, PET6_TYPE3]:
-        r = requests.post(f"{STORE1}/pet-types/{ids['id3']}/pets", json=payload)
+        r = requests.post(
+            f"{STORE1}/pet-types/{pet_type_ids['s1_id3']}/pets",
+            json=payload
+        )
         assert r.status_code == 201
 
-    # Store 2 pets
-    r = requests.post(f"{STORE2}/pet-types/{ids['id4']}/pets", json=PET3_TYPE1)
+    # Store 2
+    r = requests.post(
+        f"{STORE2}/pet-types/{pet_type_ids['s2_id1']}/pets",
+        json=PET3_TYPE1
+    )
     assert r.status_code == 201
 
-    r = requests.post(f"{STORE2}/pet-types/{ids['id5']}/pets", json=PET4_TYPE2)
+    r = requests.post(
+        f"{STORE2}/pet-types/{pet_type_ids['s2_id2']}/pets",
+        json=PET4_TYPE2
+    )
     assert r.status_code == 201
 
     for payload in [PET7_TYPE4, PET8_TYPE4]:
-        r = requests.post(f"{STORE2}/pet-types/{ids['id6']}/pets", json=payload)
+        r = requests.post(
+            f"{STORE2}/pet-types/{pet_type_ids['s2_id3']}/pets",
+            json=payload
+        )
         assert r.status_code == 201
 
-def test_get_pet_type_and_pets():
-    ids = test_pet_types_creation_and_validation.ids
-
-    # GET pet-type
-    r = requests.get(f"{STORE1}/pet-types/{ids['id2']}")
+def test_get_pet_type_and_pets(pet_type_ids):
+    r = requests.get(
+        f"{STORE1}/pet-types/{pet_type_ids['s1_id2']}"
+    )
     assert r.status_code == 200
     assert r.json() == PET_TYPE2_VAL
 
-    # GET pets
-    r = requests.get(f"{STORE2}/pet-types/{ids['id6']}/pets")
+    r = requests.get(
+        f"{STORE2}/pet-types/{pet_type_ids['s2_id3']}/pets"
+    )
     assert r.status_code == 200
 
     names = {p["name"] for p in r.json()}
