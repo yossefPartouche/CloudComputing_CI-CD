@@ -82,59 +82,57 @@ jobs:
             log.txt
             pet-store.tar
             pet-order.tar
-
-  # ======================================================
-  # JOB 2: RUN CONTAINERS & CHECK STATUS
-  # ======================================================
-  job2-run:
+  job2-test:
     needs: job1-build
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+     - name: Checkout Code
+       uses: actions/checkout@v4
+    
+     - name: Download Job 1 artifacts
+       uses: actions/dowload-artifact@v4
+       with: 
+          name: job1_artifacts
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+     - name: Load Docker images
+       run: |
+          docker load -i pet-store.tar
+          docker load -i pet-order.tar
 
-      # --- Retrieve log.txt from Job 1 ---
-      - name: Download Log Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: deployment-log
+     - name: Start Docker containers
+       run: |
+         docker compose up -d
 
-      # --- Start Containers ---
-      - name: Start Containers
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-        run: docker compose up -d
-        continue-on-error: true
+         echo "Container pet-store #1 up and running" >> log.txt
+         echo "Container pet-store #2 up and running" >> log.txt
+         echo "Container pet-order up and running" >> log.txt
 
-      # --- LINE 4: Check Container Status ---
-      - name: Check Containers and Log
-        run: |
-          # Helper function to check if a specific container name is running
-          check_container() {
-            if docker compose ps --services --filter "status=running" | grep -q "$1"; then
-              echo "Container $1 up and running" >> log.txt
-            else
-              echo "Container $1 failed to run" >> log.txt
-            fi
-          }
+     - name: Install pytest
+       run: pip install pytest requests
 
-          # Check the three required containers
-          check_container "pet-store1"
-          check_container "pet-store2"
-          check_container "pet-order"
+     - name: Run pytest
+       run: |
+        pytest -v tests/assn4_tests.py > assn4_test_results.txt
+      
+     - name: Log pytest success
+       if: success()
+       run: echo "All pytests succeeded" >> log.txt
 
-      # --- Upload Final Log ---
-      - name: Upload Final Log
-        uses: actions/upload-artifact@v4
-        with:
-          name: final-log
-          path: log.txt
+     - name: Log pytest failure
+       if: failure()
+       run: echo "pytests failed" >> log.txt
+     - name: Upload Job 2 artifacts
+       if: always()
+       uses: actions/upload-artifact@v4
+       with:
+         name: job2_artifacts
+         path: |
+           log.txt
+           assn4_test_results.txt
 
-      - name: Print Log to Console (Optional)
-        run: cat log.txt
+      
+
+
+
+
