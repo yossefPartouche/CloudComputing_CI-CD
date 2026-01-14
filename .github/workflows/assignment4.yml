@@ -1,11 +1,14 @@
-name: Build and Push with Docker Compose
+name: Assignment 4 - Build and Log
 
 on:
   push:
     branches: [ "main" ]
 
-jobs: 
-  build-and-push:
+jobs:
+  # ======================================================
+  # JOB 1: BUILD & LOGGING
+  # ======================================================
+  job1-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -13,17 +16,108 @@ jobs:
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
-        with: 
+        with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # --- LINE 1 & 2: Create Log File ---
+      - name: Initialize Log File
+        run: |
+          # Line 1: Date with -Iminutes
+          date -Iminutes > log.txt
+          
+          # Line 2: Submitter Names (REPLACE "Your Name" below)
+          echo "Your Name, Teammate Name" >> log.txt
 
-      # Step 1: Build all images defined in your docker-compose.yml
+      # --- Build Images ---
+      # We use 'continue-on-error' so the workflow doesn't stop immediately if build fails.
+      # This allows us to write the "not able to be built" log line.
       - name: Build with Docker Compose
+        id: build_step
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
         run: docker compose build
+        continue-on-error: true
 
-      # Step 2:Push 
-      - name: Push images
+      # --- LINE 3: Check Build Status ---
+      - name: Log Build Status
+        run: |
+          if [ "${{ steps.build_step.outcome }}" == "success" ]; then
+            echo "image pet-store successfully built" >> log.txt
+            echo "image pet-order successfully built" >> log.txt
+          else
+            echo "image pet-store not able to be built" >> log.txt
+            echo "image pet-order not able to be built" >> log.txt
+            # Fail the job manually after logging, if you want to stop here
+            exit 1 
+          fi
+
+      - name: Push Images
+        if: steps.build_step.outcome == 'success'
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
         run: docker compose push
+
+      # --- Save log.txt so Job 2 can access it ---
+      - name: Upload Log Artifact
+        if: always() # Upload even if build failed so we can see the log
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-log
+          path: log.txt
+
+  # ======================================================
+  # JOB 2: RUN CONTAINERS & CHECK STATUS
+  # ======================================================
+  job2-run:
+    needs: job1-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # --- Retrieve log.txt from Job 1 ---
+      - name: Download Log Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-log
+
+      # --- Start Containers ---
+      - name: Start Containers
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: docker compose up -d
+        continue-on-error: true
+
+      # --- LINE 4: Check Container Status ---
+      - name: Check Containers and Log
+        run: |
+          # Helper function to check if a specific container name is running
+          check_container() {
+            if docker compose ps --services --filter "status=running" | grep -q "$1"; then
+              echo "Container $1 up and running" >> log.txt
+            else
+              echo "Container $1 failed to run" >> log.txt
+            fi
+          }
+
+          # Check the three required containers
+          check_container "pet-store1"
+          check_container "pet-store2"
+          check_container "pet-order"
+
+      # --- Upload Final Log ---
+      - name: Upload Final Log
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-log
+          path: log.txt
+
+      - name: Print Log to Console (Optional)
+        run: cat log.txt
