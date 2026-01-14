@@ -151,7 +151,7 @@ def add_pet_type():
             "family": pet_type_doc["family"],
             "genus": pet_type_doc["genus"],
             "lifespan": pet_type_doc["lifespan"],
-            "attributes": pet_type_doc["attribute"],
+            "attributes": pet_type_doc["attributes"],
             "pets": pet_type_doc["pets"],
         }
         return jsonify(response_doc), 201
