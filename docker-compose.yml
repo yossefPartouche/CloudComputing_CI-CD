@@ -3,6 +3,7 @@ version: "3"
 services:
   pet-store1:
     build: ./pet_store
+    image: pet-store:ci
     container_name: pet-store1
     environment:
       - STORE_ID=1
@@ -17,6 +18,7 @@ services:
 
   pet-store2:
     build: ./pet_store
+    image: pet-store:ci
     container_name: pet-store2
     environment:
       - STORE_ID=2
@@ -31,6 +33,7 @@ services:
 
   pet-order:
     build: ./pet_order
+    image: pet-order:ci
     container_name: pet-order
     ports:
       - "5003:8080"
