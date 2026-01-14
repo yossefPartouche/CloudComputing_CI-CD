@@ -2,13 +2,15 @@ name: Assignment 4 - Build and Log
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main, master ]
+  pull_request:
+    branches: [main, master]
 
 jobs:
   # ======================================================
   # JOB 1: BUILD & LOGGING
   # ======================================================
-  job1-build:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -82,8 +84,8 @@ jobs:
             log.txt
             pet-store.tar
             pet-order.tar
-  job2-test:
-    needs: job1-build
+  test:
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
@@ -133,8 +135,65 @@ jobs:
           path: |
             log.txt
             assn4_test_results.txt
+  query:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install requests pytest
+
+      - name: Download Job 1 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: job1_artifacts
+
+      - name: Load Docker images
+        run: |
+          docker load -i pet-store.tar
+          docker load -i pet-order.tar
+
+      - name: Start services
+        run: |
+          docker-compose up -d --no-build
+          sleep 10  # Wait for services to be ready
+
+      - name: Seed initial data
+        run: |
+          python seed_data.py
+
+      - name: Process queries
+        run: |
+          python process_queries.py
+
+      - name: Stop services
+        if: always()
+        run: |
+          docker compose down
+
+      - name: Upload response.txt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: query-response
+          path: response.txt
+
+      - name: Commit and push response.txt
+        if: always()
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add response.txt
+          git diff --quiet && git diff --staged --quiet || git commit -m "Add query response results"
+          git push
 
 
 
