@@ -3,7 +3,6 @@ version: "3"
 services:
   pet-store1:
     build: ./pet_store
-    image: ${{ secrets.DOCKERHUB_USERNAME }}/pet-store1:latest
     container_name: pet-store1
     environment:
       - STORE_ID=1
@@ -18,7 +17,6 @@ services:
 
   pet-store2:
     build: ./pet_store
-    image: ${{ secrets.DOCKERHUB_USERNAME }}/pet-store2:latest
     container_name: pet-store2
     environment:
       - STORE_ID=2
@@ -33,7 +31,6 @@ services:
 
   pet-order:
     build: ./pet_order
-    image: ${{ secrets.DOCKERHUB_USERNAME }}/pet-order:latest
     container_name: pet-order
     ports:
       - "5003:8080"

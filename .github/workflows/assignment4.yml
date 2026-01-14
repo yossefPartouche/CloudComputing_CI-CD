@@ -13,21 +13,37 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # --- LINE 1 & 2: Create Log File ---
+      
       - name: Initialize Log File
         run: |
           # Line 1: Date with -Iminutes
           date -Iminutes > log.txt
-          
-          # Line 2: Submitter Names (REPLACE "Your Name" below)
-          echo "Your Name, Teammate Name" >> log.txt
+          echo "Yossi Partouche, Simon Halfon" >> log.txt
+      
+      - name: Build pet-store image
+        run: |
+          if docker build -t pet-store:ci ./pet_store; then
+           echo "image pet-store successfully built" >> log.txt
+          else
+           echo "image pet-store not able to be built" >> log.txt
+           exit 1
+          fi
+      
+      - name: Build pet-order image
+        run: |
+          if docker build -t pet-order:ci ./pet_order; then
+            echo "image pet-order successfully built" >> log.txt
+          else
+            echo "image pet-order not able to be built" >> log.txt
+            exit 1
+          fi
+      
+      #  name: Login to Docker Hub
+      #  uses: docker/login-action@v3
+      #  with:
+      #    username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #    password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
 
       # --- Build Images ---
       # We use 'continue-on-error' so the workflow doesn't stop immediately if build fails.
@@ -51,20 +67,21 @@ jobs:
             # Fail the job manually after logging, if you want to stop here
             exit 1 
           fi
-
-      - name: Push Images
-        if: steps.build_step.outcome == 'success'
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-        run: docker compose push
-
-      # --- Save log.txt so Job 2 can access it ---
-      - name: Upload Log Artifact
-        if: always() # Upload even if build failed so we can see the log
+      
+      - name: Export images for Job 2
+        run: |
+          docker save pet-store:ci -o pet-store.tar
+          docker save pet-order:ci -o pet-order.tar
+      
+      - name: Upload Job 1 artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: deployment-log
-          path: log.txt
+          name: job1_artifacts
+          path: |
+            log.txt
+            pet-store.tar
+            pet-order.tar
 
   # ======================================================
   # JOB 2: RUN CONTAINERS & CHECK STATUS
