@@ -1,48 +1,29 @@
-name: Assignment CI CD
+name: Build and Push with Docker Compose
 
 on:
   push:
-    branches: 
-        - main
-    #[ "main" ]  # This tells GitHub: "Run this every time I push to main"
+    branches: [ "main" ]
 
 jobs: 
-  # JOB 1: Build & Push (The CI)
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with: 
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}    
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # Step 1: Build all images defined in your docker-compose.yml
+      - name: Build with Docker Compose
+        run: docker-compose build
 
-      # Build Pet Store 1
-      - name: Build and Push Store 1
-        uses: docker/build-push-action@v5
-        with:
-          context: ./pet-store
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/pet-store1:latest
-
-      # Build Pet Store 2 using the SAME 'pet-store' folder
-      - name: Build and Push Pet Store 2
-        uses: docker/build-push-action@v5
-        with:
-          context: ./pet-store
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/pet-store2:latest
-      
-      # Build Pet Order using the 'pet-order' folder
-      - name: Build and Push Pet Order
-        uses: docker/build-push-action@v5
-        with:
-          context: ./pet-order
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/pet-order:latest
+      # Step 2: Tag and Push (Docker Compose images need to be pushed)
+      - name: Push images
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/pet-store1:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/pet-store2:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/pet-order:latest
