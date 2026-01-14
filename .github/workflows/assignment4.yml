@@ -163,7 +163,7 @@ jobs:
 
       - name: Start services
         run: |
-          docker-compose up -d --no-build
+          docker compose up -d --no-build
           sleep 10  # Wait for services to be ready
 
       - name: Seed initial data
