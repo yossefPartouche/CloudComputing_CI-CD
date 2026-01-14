@@ -1,0 +1,63 @@
+version: "3"
+
+services:
+  pet-store1:
+    build: ./pet_store
+    container_name: pet-store1
+    environment:
+      - STORE_ID=1
+      - MONGO_URI=mongodb://mongo-store:27017
+    ports:
+      - "5001:8000"
+    # expose:
+    #   - "8000"
+    restart: always
+    depends_on:
+      - mongo-store
+
+  pet-store2:
+    build: ./pet_store
+    container_name: pet-store2
+    environment:
+      - STORE_ID=2
+      - MONGO_URI=mongodb://mongo-store:27017
+    ports:
+      - "5002:8000"
+    # expose:
+    #   - "8000"
+    restart: always
+    depends_on:
+      - mongo-store
+
+  pet-order:
+    build: ./pet_order
+    container_name: pet-order
+    ports:
+      - "5003:8080"
+    expose:
+      - "8080"
+    restart: always
+    depends_on:
+      - mongo-order
+    environment:
+      - MONGO_URI=mongodb://mongo-order:27017
+
+  mongo-store:
+    image: mongo:latest
+    container_name: mongo-store
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_store_data:/data/db
+
+  mongo-order:
+    image: mongo:latest
+    container_name: mongo-order
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_order_data:/data/db
+
+volumes:
+  mongo_store_data:
+  mongo_order_data:
