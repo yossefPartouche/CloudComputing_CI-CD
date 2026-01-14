@@ -19,7 +19,7 @@ jobs:
 
       # Step 1: Build all images defined in your docker-compose.yml
       - name: Build with Docker Compose
-        run: docker-compose build
+        run: docker compose build
 
       # Step 2: Tag and Push (Docker Compose images need to be pushed)
       - name: Push images
