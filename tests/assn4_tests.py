@@ -15,7 +15,7 @@ PET_TYPE1_VAL = {
     "type": "Golden Retriever",
     "family": "Canidae",
     "genus": "Canis",
-    "attributes": [],
+    "attribute": [],
     "lifespan": 12,
 }
 
@@ -23,7 +23,7 @@ PET_TYPE2_VAL = {
     "type": "Australian Shepherd",
     "family": "Canidae",
     "genus": "Canis",
-    "attributes": ["Loyal", "outgoing", "and", "friendly"],
+    "attribute": ["Loyal", "outgoing", "and", "friendly"],
     "lifespan": 15,
 }
 
@@ -31,7 +31,7 @@ PET_TYPE3_VAL = {
     "type": "Abyssinian",
     "family": "Felidae",
     "genus": "Felis",
-    "attributes": ["Intelligent", "and", "curious"],
+    "attribute": ["Intelligent", "and", "curious"],
     "lifespan": 13,
 }
 
@@ -39,7 +39,7 @@ PET_TYPE4_VAL = {
     "type": "bulldog",
     "family": "Canidae",
     "genus": "Canis",
-    "attributes": ["Gentle", "calm", "and", "affectionate"],
+    "attribute": ["Gentle", "calm", "and", "affectionate"],
     "lifespan": None,
 }
 
@@ -129,7 +129,7 @@ def test_get_pet_type_and_pets(seeded_ids):
     assert r.status_code == 200
     body = r.json()
 
-    for k in ["type", "family", "genus", "attributes", "lifespan"]:
+    for k in ["type", "family", "genus", "attribute", "lifespan"]:
         assert body.get(k) == PET_TYPE2_VAL[k]
 
     r = requests.get(f"{STORE2}/pet-types/{ids['id6']}/pets", timeout=10)
