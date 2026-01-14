@@ -87,49 +87,49 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-     - name: Checkout Code
-       uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
     
-     - name: Download Job 1 artifacts
-       uses: actions/dowload-artifact@v4
-       with: 
+      - name: Download Job 1 artifacts
+        uses: actions/download-artifact@v4
+        with: 
           name: job1_artifacts
 
-     - name: Load Docker images
-       run: |
+      - name: Load Docker images
+        run: |
           docker load -i pet-store.tar
           docker load -i pet-order.tar
 
-     - name: Start Docker containers
-       run: |
-         docker compose up -d
+      - name: Start Docker containers
+        run: |
+          docker compose up -d
+          echo "Container pet-store #1 up and running" >> log.txt
+          echo "Container pet-store #2 up and running" >> log.txt
+          echo "Container pet-order up and running" >> log.txt
 
-         echo "Container pet-store #1 up and running" >> log.txt
-         echo "Container pet-store #2 up and running" >> log.txt
-         echo "Container pet-order up and running" >> log.txt
+      - name: Install pytest
+        run: pip install pytest requests
 
-     - name: Install pytest
-       run: pip install pytest requests
-
-     - name: Run pytest
-       run: |
-        pytest -v tests/assn4_tests.py > assn4_test_results.txt
+      - name: Run pytest
+        run: |
+          pytest -v tests/assn4_tests.py > assn4_test_results.txt
       
-     - name: Log pytest success
-       if: success()
-       run: echo "All pytests succeeded" >> log.txt
+      - name: Log pytest success
+        if: success()
+        run: echo "All pytests succeeded" >> log.txt
 
-     - name: Log pytest failure
-       if: failure()
-       run: echo "pytests failed" >> log.txt
-     - name: Upload Job 2 artifacts
-       if: always()
-       uses: actions/upload-artifact@v4
-       with:
-         name: job2_artifacts
-         path: |
-           log.txt
-           assn4_test_results.txt
+      - name: Log pytest failure
+        if: failure()
+        run: echo "pytests failed" >> log.txt
+
+      - name: Upload Job 2 artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: job2_artifacts
+          path: |
+            log.txt
+            assn4_test_results.txt
 
       
 
