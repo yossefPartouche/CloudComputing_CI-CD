@@ -100,6 +100,9 @@ jobs:
           docker load -i pet-store.tar
           docker load -i pet-order.tar
 
+      - name: Start Containers
+        run: docker compose up -d --no-build
+
       - name: Start Docker containers
         if: always()
         run: |
