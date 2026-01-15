@@ -1,25 +1,12 @@
 import requests
 import sys
 import time
-
-STORE1 = "http://localhost:5001"
-STORE2 = "http://localhost:5002"
-
-# Pet types from your test file
-PET_TYPE1 = {"type": "Golden Retriever"}
-PET_TYPE2 = {"type": "Australian Shepherd"}
-PET_TYPE3 = {"type": "Abyssinian"}
-PET_TYPE4 = {"type": "bulldog"}
-
-# Pets
-PET1_TYPE1 = {"name": "Lander", "birthdate": "05-14-2020"}
-PET2_TYPE1 = {"name": "Lanky"}
-PET3_TYPE1 = {"name": "Shelly", "birthdate": "07-07-2019"}
-PET4_TYPE2 = {"name": "Felicity", "birthdate": "27-11-2011"}
-PET5_TYPE3 = {"name": "Muscles"}
-PET6_TYPE3 = {"name": "Junior"}
-PET7_TYPE4 = {"name": "Lazy", "birthdate": "07-08-2018"}
-PET8_TYPE4 = {"name": "Lemon", "birthdate": "27-03-2020"}
+from tests.test_data import (
+    STORE1, STORE2,
+    PET_TYPE1, PET_TYPE2, PET_TYPE3, PET_TYPE4,
+    PET1_TYPE1, PET2_TYPE1, PET3_TYPE1, PET4_TYPE2,
+    PET5_TYPE3, PET6_TYPE3, PET7_TYPE4, PET8_TYPE4
+)
 
 def wait_for_service(url, max_retries=10, delay=2):
     """Wait for a service to be ready"""

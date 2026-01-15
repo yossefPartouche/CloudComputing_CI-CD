@@ -1,4 +1,7 @@
-name: Assignment 4 - Build and Log
+# name:= Human readable label (displayed in github actions)
+# id := Machine-readable identifier - used for reference the step in future steps
+# The id can be refered by "steps.<id_tag>"
+name: Assignment 4
 
 on:
   push:
@@ -21,56 +24,39 @@ jobs:
       
       - name: Initialize Log File
         run: |
-          # Line 1: Date with -Iminutes
           date -Iminutes > log.txt
           echo "Yossi Partouche, Simon Halfon" >> log.txt
-      
       - name: Build pet-store image
+        id: build_pet_store
+        run: docker build -t pet-store:ci ./pet_store
+        continue-on-error: true
+      
+      - name: Log pet-store build status
         run: |
-          if docker build -t pet-store:ci ./pet_store; then
-           echo "image pet-store successfully built" >> log.txt
+          if [ "${{ steps.build_pet_store.outcome }}" == "success" ]; then
+            echo "image pet-store successfully built" >> log.txt
           else
-           echo "image pet-store not able to be built" >> log.txt
-           exit 1
+            echo "image pet-store not able to be built" >> log.txt
           fi
       
       - name: Build pet-order image
+        id: build_pet_order
+        run: docker build -t pet-order:ci ./pet_order
+        continue-on-error: true
+      
+      - name: Log pet-order build status
         run: |
-          if docker build -t pet-order:ci ./pet_order; then
+          if [ "${{ steps.build_pet_order.outcome }}" == "success" ]; then
             echo "image pet-order successfully built" >> log.txt
           else
             echo "image pet-order not able to be built" >> log.txt
-            exit 1
           fi
       
-      #  name: Login to Docker Hub
-      #  uses: docker/login-action@v3
-      #  with:
-      #    username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #    password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
-
-      # --- Build Images ---
-      # We use 'continue-on-error' so the workflow doesn't stop immediately if build fails.
-      # This allows us to write the "not able to be built" log line.
-      - name: Build with Docker Compose
-        id: build_step
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-        run: docker compose build
-        continue-on-error: true
-
-      # --- LINE 3: Check Build Status ---
-      - name: Log Build Status
+      - name: Check if any build failed
         run: |
-          if [ "${{ steps.build_step.outcome }}" == "success" ]; then
-            echo "image pet-store successfully built" >> log.txt
-            echo "image pet-order successfully built" >> log.txt
-          else
-            echo "image pet-store not able to be built" >> log.txt
-            echo "image pet-order not able to be built" >> log.txt
-            # Fail the job manually after logging, if you want to stop here
-            exit 1 
+          if [ "${{ steps.build_pet_store.outcome }}" != "success" ] || [ "${{ steps.build_pet_order.outcome }}" != "success" ]; then
+            echo "Build failed, stopping workflow"
+            exit 1
           fi
       
       - name: Export images for Job 2
@@ -87,6 +73,10 @@ jobs:
             log.txt
             pet-store.tar
             pet-order.tar
+
+  # ======================================================
+  # JOB 2: TEST
+  # ======================================================
   test:
     needs: build
     runs-on: ubuntu-latest
@@ -108,27 +98,36 @@ jobs:
       - name: Start Containers
         run: docker compose up -d --no-build
 
-      - name: Start Docker containers
+      - name: Wait for services to be ready
+        run: sleep 15
+
+      - name: Check Container Status
         if: always()
         run: |
-          docker ps --format "{{.Names}}" | grep -qx "pet-store1" && echo "Container pet-store #1 up and running" >> log.txt || echo "Container pet-store #1 failed to run" >> log.txt
-          docker ps --format "{{.Names}}" | grep -qx "pet-store2" && echo "Container pet-store #2 up and running" >> log.txt || echo "Container pet-store #2 failed to run" >> log.txt
-          docker ps --format "{{.Names}}" | grep -qx "pet-order"  && echo "Container pet-order up and running"   >> log.txt || echo "Container pet-order failed to run"   >> log.txt
+          docker ps --format "{{.Names}}" | grep -qx "pet-store1" && echo "Container pet-store1 up and running" >> log.txt || echo "Container pet-store1 failed to run" >> log.txt
+          docker ps --format "{{.Names}}" | grep -qx "pet-store2" && echo "Container pet-store2 up and running" >> log.txt || echo "Container pet-store2 failed to run" >> log.txt
+          docker ps --format "{{.Names}}" | grep -qx "pet-order"  && echo "Container pet-order up and running" >> log.txt || echo "Container pet-order failed to run" >> log.txt
 
       - name: Install pytest
         run: pip install pytest requests
 
       - name: Run pytest
+        id: pytest_run
         run: |
-          pytest -v tests/assn4_tests.py > assn4_test_results.txt
+          pytest -v tests/assn4_tests.py > assn4_test_results.txt 2>&1
+        continue-on-error: true
       
-      - name: Log pytest success
-        if: success()
-        run: echo "All pytests succeeded" >> log.txt
+      - name: Log pytest results
+        run: |
+          if [ "${{ steps.pytest_run.outcome }}" == "success" ]; then
+            echo "All pytests succeeded" >> log.txt
+          else
+            echo "pytests failed" >> log.txt
+          fi
 
-      - name: Log pytest failure
-        if: failure()
-        run: echo "pytests failed" >> log.txt
+      - name: Stop containers
+        if: always()
+        run: docker compose down
 
       - name: Upload Job 2 artifacts
         if: always()
@@ -138,6 +137,10 @@ jobs:
           path: |
             log.txt
             assn4_test_results.txt
+
+  # ======================================================
+  # JOB 3: QUERY
+  # ======================================================
   query:
     needs: test
     runs-on: ubuntu-latest
@@ -152,12 +155,22 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests pytest
+          pip install requests
 
       - name: Download Job 1 artifacts
         uses: actions/download-artifact@v4
         with:
           name: job1_artifacts
+
+      - name: Download Job 2 log
+        uses: actions/download-artifact@v4
+        with:
+          name: job2_artifacts
+          path: job2_logs
+
+      - name: Merge logs
+        run: |
+          cat job2_logs/log.txt >> log.txt
 
       - name: Load Docker images
         run: |
@@ -167,20 +180,27 @@ jobs:
       - name: Start services
         run: |
           docker compose up -d --no-build
-          sleep 10  # Wait for services to be ready
+          sleep 15
 
       - name: Seed initial data
-        run: |
-          python seed_data.py
+        id: seed_data
+        run: python seed_data.py
+        continue-on-error: true
 
       - name: Process queries
+        id: process_queries
         run: |
-          python process_queries.py
+          if [ -f "query.txt" ]; then
+            python process_queries.py
+          else
+            echo "No query.txt found, creating empty response.txt"
+            touch response.txt
+          fi
+        continue-on-error: true
 
       - name: Stop services
         if: always()
-        run: |
-          docker compose down
+        run: docker compose down
 
       - name: Upload response.txt
         if: always()
@@ -189,14 +209,21 @@ jobs:
           name: query-response
           path: response.txt
 
+      - name: Upload final log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-log
+          path: log.txt
+
       - name: Commit and push response.txt
         if: always()
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add response.txt
-          git diff --quiet && git diff --staged --quiet || git commit -m "Add query response results"
-          git push
+          git add log.txt || true
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Add query response results [skip ci]" && git push)
 
 
 
