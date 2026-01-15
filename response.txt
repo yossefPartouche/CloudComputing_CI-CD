@@ -1,0 +1,80 @@
+200
+[
+  {
+    "attributes": [],
+    "family": "Canidae",
+    "genus": "Canis",
+    "id": 1,
+    "lifespan": 12,
+    "pets": [
+      "Lander",
+      "Lanky"
+    ],
+    "type": "Golden Retriever"
+  },
+  {
+    "attributes": [
+      "Loyal",
+      "outgoing",
+      "and",
+      "friendly"
+    ],
+    "family": "Canidae",
+    "genus": "Canis",
+    "id": 2,
+    "lifespan": 15,
+    "pets": [],
+    "type": "Australian Shepherd"
+  }
+]
+;
+200
+[
+  {
+    "attributes": [
+      "Gentle",
+      "calm",
+      "and",
+      "affectionate"
+    ],
+    "family": "Canidae",
+    "genus": "Canis",
+    "id": 3,
+    "lifespan": null,
+    "pets": [
+      "Lazy",
+      "Lemon"
+    ],
+    "type": "bulldog"
+  }
+]
+;
+201
+{
+  "pet-name": "Lander",
+  "pet-type": "Golden Retriever",
+  "purchase-id": "5760beb3-60d1-42c8-b00d-eae1566fa836",
+  "purchaser": "John Doe",
+  "store": 1
+}
+;
+200
+[
+  {
+    "attributes": [
+      "Intelligent",
+      "and",
+      "curious"
+    ],
+    "family": "Felidae",
+    "genus": "Felis",
+    "id": 3,
+    "lifespan": 13,
+    "pets": [
+      "Muscles",
+      "Junior"
+    ],
+    "type": "Abyssinian"
+  }
+]
+;
